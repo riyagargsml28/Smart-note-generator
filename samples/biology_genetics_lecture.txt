@@ -1,0 +1,25 @@
+[00:00:03] Hello class. Today in BIO 105 Molecular Biology, we will explore the Central Dogma of Molecular Biology: DNA Replication and Protein Synthesis.
+[00:00:18] DNA, or Deoxyribonucleic Acid, is the hereditary material found in the nucleus of eukaryotic cells.
+[00:00:30] As described by Watson and Crick in 1953, DNA exists as a double-stranded helix antiparallel polymer.
+[00:00:42] The two strands are held together by complementary base pairing: Adenine pairs with Thymine via two hydrogen bonds (A = T), and Guanine pairs with Cytosine via three hydrogen bonds (G = C).
+
+[00:01:05] Now let's examine the process of DNA Replication.
+[00:01:12] DNA replication is semi-conservative, meaning each daughter molecule contains one original parent strand and one newly synthesized strand.
+[00:01:25] The replication process involves several key enzymes:
+[00:01:30] First, Helicase unwinds the double helix at the replication fork by breaking hydrogen bonds between base pairs.
+[00:01:42] Second, Topoisomerase relieves the supercoiling tension ahead of the replication fork.
+[00:01:52] Third, Primase synthesizes short RNA primers necessary to initiate DNA synthesis.
+[00:02:04] Fourth, DNA Polymerase III adds complementary deoxynucleotides strictly in the 5' to 3' direction.
+[00:02:18] Because DNA Polymerase can only read from 3' to 5' and build 5' to 3', one strand is built continuously, called the Leading Strand, while the other strand is built discontinuously in Okazaki fragments, called the Lagging Strand.
+[00:02:39] Finally, DNA Ligase seals the nicks in the sugar-phosphate backbone by forming covalent phosphodiester bonds.
+
+[00:02:55] Moving on to Transcription and Translation.
+[00:03:02] Transcription is defined as the enzymatic synthesis of messenger RNA (mRNA) from a DNA template catalyzed by RNA Polymerase.
+[00:03:17] In RNA, Uracil (U) replaces Thymine (T) and pairs with Adenine.
+[00:03:26] After transcription, eukaryotic pre-mRNA undergoes splicing where introns are excised and exons are spliced together.
+[00:03:40] Next comes Translation, which occurs on the ribosome in the cytoplasm.
+[00:03:48] Ribosomes read codons, which are triplets of nucleotides on mRNA. Each codon specifies an amino acid according to the universal genetic code.
+[00:04:02] Transfer RNA (tRNA) molecules carry the specific amino acid and possess an anticodon complementary to the mRNA codon.
+[00:04:14] Peptide bonds are formed between adjacent amino acids to assemble the functional polypeptide chain.
+
+[00:04:30] To summarize today's lecture: Genetic information flows from DNA through RNA to Protein. DNA replication relies on helicase, DNA polymerase, and ligase, followed by transcription and ribosomal translation to build essential cellular proteins.

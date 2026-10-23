@@ -1,0 +1,44 @@
+[00:00:05] Professor Davis: Good morning everyone. Welcome back to CS 301, Operating Systems and Architecture.
+[00:00:15] Today we're going to dive into one of the most elegant abstractions in modern computer engineering: Virtual Memory and Paging.
+[00:00:27] Um, so, as you know, back in the early days of computing, programs were directly loaded into physical RAM.
+[00:00:38] But what happens when you want to run a 16-gigabyte game or database on a machine with only 8 gigabytes of RAM?
+[00:00:49] Or what if process A tries to accidentally overwrite the memory space of process B? That would crash the whole machine, right?
+[00:01:03] So, virtual memory solves both problems. Virtual memory is defined as a storage allocation scheme in which secondary memory can be addressed as though it were part of main memory.
+[00:01:21] It provides two enormous benefits: memory protection between isolated processes, and the illusion of an almost boundless address space.
+
+[00:01:40] Now let's talk about the underlying mechanism: Paging.
+[00:01:48] How does the hardware and OS divide up memory?
+[00:01:54] In paging, a process's virtual address space is broken down into fixed-size chunks called pages.
+[00:02:04] Usually, a page is 4 Kilobytes, or 4096 bytes.
+[00:02:12] Meanwhile, physical memory, the actual silicon RAM chips, is divided into fixed-size blocks called page frames.
+[00:02:23] To bridge the gap, the operating system maintains a critical data structure known as the Page Table.
+[00:02:35] The page table maps each virtual page number to its corresponding physical frame number.
+[00:02:45] When your program issues a memory read instruction, say at address 0x0040A120, the Memory Management Unit, or MMU, intercepts that address.
+[00:02:59] The MMU looks up the virtual page in the page table and translates it into the actual physical frame address in RAM.
+
+[00:03:15] Moving on to page faults. What happens if a requested page isn't actually in physical memory?
+[00:03:25] Each page table entry has a valid-invalid bit. If the bit is set to 0, it means the page is currently residing on the hard disk or SSD swap space.
+[00:03:40] Attempting to access an invalid page triggers a hardware interrupt called a Page Fault.
+[00:03:49] A page fault is defined as a trap raised by the hardware MMU when a program attempts to access a page that is mapped in the virtual address space but not loaded into physical RAM.
+[00:04:05] When a page fault occurs:
+[00:04:08] Step 1: The CPU traps into kernel mode and the OS suspends the executing thread.
+[00:04:16] Step 2: The OS locates the requested page on secondary storage in the swap file.
+[00:04:24] Step 3: The OS issues an I/O request to read the page into an available free frame in physical RAM.
+[00:04:35] Step 4: Once the I/O completes, the OS updates the page table entry and marks the valid bit as 1.
+[00:04:44] Step 5: The instruction that caused the trap is restarted seamlessly.
+
+[00:04:55] Now let's look at performance. We calculate performance using Effective Access Time, or EAT.
+[00:05:07] The formula is: EAT = (1 - p) * ma + p * page_fault_time
+[00:05:18] Where 'ma' is the normal physical memory access time, typically 10 to 100 nanoseconds.
+[00:05:27] And 'p' is the page fault rate, which must be kept between 0 and 1.
+[00:05:35] Notice that page fault service time involves disk I/O, which takes 8 to 10 milliseconds!
+[00:05:44] That's a factor of 100,000 times slower than RAM! Even a tiny page fault rate of 0.1% can degrade performance drastically.
+
+[00:06:01] Finally, what happens when RAM is completely full and we need to bring in a new page?
+[00:06:09] We must choose a victim page to evict using a Page Replacement Algorithm.
+[00:06:17] First, there is FIFO, or First-In, First-Out. FIFO replaces the oldest page loaded in memory.
+[00:06:26] But FIFO suffers from Belady's Anomaly, which is the counterintuitive phenomenon where adding more physical page frames actually increases the total number of page faults.
+[00:06:41] Second, there is LRU, or Least Recently Used. LRU replaces the page that has not been accessed for the longest period of time. It relies on the principle of temporal locality and performs very well in practice.
+[00:06:58] Third, there is the theoretical Optimal Algorithm, which replaces the page that will not be used for the longest period of time in the future. We can't implement this in real time because it requires future knowledge, but we use it as a benchmark to compare LRU against.
+
+[00:07:20] In conclusion, virtual memory provides address isolation and memory expansion through paging and MMU translation. Minimizing page faults with efficient replacement algorithms like LRU is essential for high-performance computing.

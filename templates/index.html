@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Notes Generator - AI Study Companion for Lecture Transcripts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234F46E5'><path d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z'/></svg>">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="app-header">
+    <div class="nav-container">
+      <div class="logo-area" onclick="navigateTo('home')">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <path d="M9 7h6"></path>
+            <path d="M9 11h6"></path>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">Smart Notes</span>
+          <span class="logo-tag">Lecture AI</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" data-page="home" onclick="navigateTo('home')">Home</button>
+        <button class="nav-btn" data-page="generator" onclick="navigateTo('generator')">Generator</button>
+        <button class="nav-btn" data-page="notes-view" id="nav-notes-btn" onclick="navigateTo('notes-view')" style="display:none;">Current Note</button>
+        <button class="nav-btn" data-page="history" onclick="navigateTo('history')">My Notes <span class="badge" id="history-count-badge">0</span></button>
+        <button class="nav-btn" data-page="about" onclick="navigateTo('about')">About</button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="btn btn-primary btn-sm" onclick="navigateTo('generator')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New Note</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- ========================================== -->
+    <!-- 1. HOME VIEW -->
+    <!-- ========================================== -->
+    <section id="view-home" class="page-view active">
+      <div class="hero-section">
+        <div class="hero-badge">
+          <span class="pulse-dot"></span>
+          <span>AI-Powered Academic Note Taking</span>
+        </div>
+        <h1 class="hero-title">Transform Lecture Transcripts into <span class="gradient-text">Mastery-Ready</span> Study Notes</h1>
+        <p class="hero-subtitle">
+          Turn hours of spoken lectures or raw transcripts into crystal-clear study guides with structured summaries, technical definitions, formulas, revision Q&A, and interactive self-quizzes.
+        </p>
+
+        <div class="hero-cta-group">
+          <button class="btn btn-primary btn-lg" onclick="navigateTo('generator')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span>Generate Notes Now</span>
+          </button>
+          <button class="btn btn-secondary btn-lg" onclick="loadSampleIntoGenerator('computer_science')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Try Sample Lecture</span>
+          </button>
+        </div>
+
+        <!-- Quick Sample Cards -->
+        <div class="sample-pills-container">
+          <span class="sample-label">Or load a sample topic:</span>
+          <div class="sample-pills">
+            <button class="sample-pill" onclick="loadSampleIntoGenerator('computer_science')">
+              💻 Virtual Memory & Paging (CS)
+            </button>
+            <button class="sample-pill" onclick="loadSampleIntoGenerator('physics')">
+              ⚛️ Quantum Duality & Uncertainty
+            </button>
+            <button class="sample-pill" onclick="loadSampleIntoGenerator('biology')">
+              🧬 DNA Replication & Genetics
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Showcase -->
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon bg-indigo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          </div>
+          <h3>Multi-Source Input</h3>
+          <p>Paste transcripts directly, upload documents (TXT, PDF, DOCX), or upload audio lectures with Whisper ASR speech-to-text.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon bg-cyan">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h3>Smart Disfluency Cleaning</h3>
+          <p>Automatically eliminates verbal pauses ("um", "uh", "you know"), repetitive stuttering, and subtitle timestamps without losing key meaning.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon bg-emerald">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+          </div>
+          <h3>Structured Academic JSON</h3>
+          <p>Organizes content into main headings, key bullets, definitions, examples, formulas, glossary, and concise conclusions.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon bg-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          </div>
+          <h3>Interactive Quiz & Active Recall</h3>
+          <p>Test your knowledge directly in the browser with collapsible flashcard revision questions and auto-grading multiple-choice quizzes.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon bg-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </div>
+          <h3>Multi-Format Export</h3>
+          <p>Export your revision notes with one click into publication-grade ReportLab PDF, formatted Markdown (.md), or plain text (.txt).</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon bg-rose">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          </div>
+          <h3>SQLite Revision History</h3>
+          <p>Persistent database library keeps track of all your lecture notes. Search by keywords, filter by subject, edit, or delete anytime.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. GENERATOR DASHBOARD VIEW -->
+    <!-- ========================================== -->
+    <section id="view-generator" class="page-view">
+      <div class="view-header">
+        <div>
+          <h2>Generate Study Notes</h2>
+          <p class="subtitle">Upload or paste your lecture content and configure your desired detail level.</p>
+        </div>
+        <div class="view-header-right">
+          <button class="btn btn-secondary btn-sm" onclick="loadSampleModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>Load Sample</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="generator-layout">
+        <!-- Input Form Column -->
+        <div class="generator-main-card">
+          <!-- Input Source Tabs -->
+          <div class="tab-strip">
+            <button class="tab-btn active" data-tab="tab-paste" onclick="switchInputTab('tab-paste')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+              <span>Paste Transcript</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-document" onclick="switchInputTab('tab-document')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>Upload Document</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-audio" onclick="switchInputTab('tab-audio')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+              <span>Audio Recording</span>
+            </button>
+          </div>
+
+          <!-- Tab Content 1: Direct Paste -->
+          <div id="tab-paste" class="tab-pane active">
+            <div class="textarea-wrapper">
+              <textarea id="transcript-input" placeholder="Paste your lecture transcript, video captions, or meeting notes here...&#10;&#10;Tip: Spoken filler words like 'um', 'uh', repeated words, and timestamps will be automatically detected and cleaned."></textarea>
+              <div class="textarea-footer">
+                <span id="word-char-counter">0 words | 0 characters</span>
+                <button class="btn-text" onclick="clearTranscriptInput()">Clear text</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: File Upload -->
+          <div id="tab-document" class="tab-pane">
+            <div class="drop-zone" id="document-dropzone">
+              <input type="file" id="document-file-input" accept=".txt,.pdf,.docx,.md" style="display:none;" onchange="handleDocumentUpload(this.files[0])">
+              <div class="drop-content" onclick="document.getElementById('document-file-input').click()">
+                <div class="drop-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <h4>Drag & drop lecture document here</h4>
+                <p>Supports <strong>TXT, PDF, DOCX, and MD</strong> files up to 50MB</p>
+                <button type="button" class="btn btn-secondary btn-sm">Browse Files</button>
+              </div>
+            </div>
+            <div id="document-upload-status" class="file-upload-status" style="display:none;"></div>
+          </div>
+
+          <!-- Tab Content 3: Audio Upload -->
+          <div id="tab-audio" class="tab-pane">
+            <div class="drop-zone" id="audio-dropzone">
+              <input type="file" id="audio-file-input" accept=".mp3,.wav,.m4a,.webm,.ogg,.flac,.aac" style="display:none;" onchange="handleAudioUpload(this.files[0])">
+              <div class="drop-content" onclick="document.getElementById('audio-file-input').click()">
+                <div class="drop-icon audio-icon-pulse">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                </div>
+                <h4>Upload Lecture Audio Recording</h4>
+                <p>Supports <strong>MP3, WAV, M4A, WEBM, OGG</strong> (up to 25MB for Whisper Speech-to-Text)</p>
+                <button type="button" class="btn btn-secondary btn-sm">Select Audio File</button>
+              </div>
+            </div>
+            <div id="audio-upload-status" class="file-upload-status" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Settings Sidebar Column -->
+        <div class="generator-sidebar">
+          <div class="settings-card">
+            <h3 class="settings-title">Lecture Settings</h3>
+
+            <!-- Subject Selection -->
+            <div class="form-group">
+              <label for="subject-select" class="form-label">Subject / Academic Discipline</label>
+              <select id="subject-select" class="form-select" onchange="handleSubjectChange(this.value)">
+                <option value="Computer Science">Computer Science</option>
+                <option value="Physics">Physics</option>
+                <option value="Biology">Biology</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Mathematics">Mathematics</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Medicine & Health">Medicine & Health</option>
+                <option value="Economics & Finance">Economics & Finance</option>
+                <option value="History">History</option>
+                <option value="Literature">Literature</option>
+                <option value="General">General / Other</option>
+                <option value="__custom__">+ Enter Custom Subject...</option>
+              </select>
+              <input type="text" id="custom-subject-input" class="form-input" placeholder="Enter subject name (e.g. Cognitive Neuroscience)" style="display:none; margin-top: 8px;">
+            </div>
+
+            <!-- Notes Detail Level -->
+            <div class="form-group">
+              <label class="form-label">Notes Detail Level</label>
+              <div class="detail-cards">
+                <label class="detail-card">
+                  <input type="radio" name="detail_level" value="short">
+                  <div class="detail-card-body">
+                    <span class="detail-name">Short</span>
+                    <span class="detail-desc">Quick overview, core takeaways & 3 key questions.</span>
+                  </div>
+                </label>
+                <label class="detail-card">
+                  <input type="radio" name="detail_level" value="medium" checked>
+                  <div class="detail-card-body">
+                    <span class="detail-name">Medium (Recommended)</span>
+                    <span class="detail-desc">Balanced study notes, definitions, examples & 5 questions.</span>
+                  </div>
+                </label>
+                <label class="detail-card">
+                  <input type="radio" name="detail_level" value="detailed">
+                  <div class="detail-card-body">
+                    <span class="detail-name">Detailed</span>
+                    <span class="detail-desc">Comprehensive deep dive, all topics, glossary & 8 questions.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Smart Text Options -->
+            <div class="form-group">
+              <label class="form-label">Pre-Processing Options</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="clean-fillers-check" checked>
+                  <span>Remove verbal fillers ("um", "uh", "you know")</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="remove-timestamps-check" checked>
+                  <span>Strip subtitle timestamps & speaker labels</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="enable-segmentation-check" checked>
+                  <span>Automatic topic segmentation</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Generate Action Button -->
+            <button id="btn-generate" class="btn btn-primary btn-block btn-generate" onclick="generateNotes()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              <span>Generate Smart Notes</span>
+            </button>
+
+            <!-- Live Status Progress Indicator -->
+            <div id="generation-progress" class="progress-box" style="display:none;">
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+              </div>
+              <div class="progress-step-text" id="progress-text">Analyzing transcript...</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. GENERATED NOTES VIEW -->
+    <!-- ========================================== -->
+    <section id="view-notes-view" class="page-view">
+      <!-- Notes Action Banner -->
+      <div class="notes-header-banner">
+        <div class="notes-meta-info">
+          <div class="notes-tags">
+            <span class="tag tag-subject" id="note-view-subject">Computer Science</span>
+            <span class="tag tag-detail" id="note-view-level">Medium Notes</span>
+            <span class="tag tag-words" id="note-view-words">1,240 words</span>
+            <span class="tag tag-engine" id="note-view-engine">Academic AI</span>
+          </div>
+          <h1 class="notes-main-title" id="note-view-title">Virtual Memory & Paging</h1>
+        </div>
+
+        <!-- Export & Action Toolbar -->
+        <div class="notes-action-toolbar">
+          <div class="dropdown">
+            <button class="btn btn-primary btn-sm">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Download Notes</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="dropdown-menu">
+              <a href="#" onclick="downloadCurrentNote('pdf'); return false;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                <span>Styled PDF (.pdf)</span>
+              </a>
+              <a href="#" onclick="downloadCurrentNote('markdown'); return false;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="7 15 10 10 13 15"></polyline></svg>
+                <span>Markdown Document (.md)</span>
+              </a>
+              <a href="#" onclick="downloadCurrentNote('txt'); return false;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+                <span>Plain Text (.txt)</span>
+              </a>
+            </div>
+          </div>
+
+          <button class="btn btn-secondary btn-sm" onclick="toggleEditMode()" id="btn-edit-toggle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span id="edit-btn-text">Edit Notes</span>
+          </button>
+
+          <button class="btn btn-secondary btn-sm" onclick="copyNotesToClipboard()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy All</span>
+          </button>
+
+          <button class="btn btn-secondary btn-sm" onclick="scrollToQuiz()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            <span>Practice Quiz</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notes Navigation Sub-tabs -->
+      <div class="notes-subnav">
+        <button class="subnav-btn active" onclick="switchNotesSection('sec-content')">Study Guide</button>
+        <button class="subnav-btn" onclick="switchNotesSection('sec-formulas')" id="tab-btn-formulas">Formulas (<span id="count-formulas">0</span>)</button>
+        <button class="subnav-btn" onclick="switchNotesSection('sec-glossary')" id="tab-btn-glossary">Glossary (<span id="count-glossary">0</span>)</button>
+        <button class="subnav-btn" onclick="switchNotesSection('sec-revision')">Revision Q&A (<span id="count-revision">0</span>)</button>
+        <button class="subnav-btn" onclick="switchNotesSection('sec-quiz')">Interactive Quiz (<span id="count-mcqs">0</span>)</button>
+        <button class="subnav-btn" onclick="switchNotesSection('sec-transcript')">Transcript Cleaning</button>
+      </div>
+
+      <!-- Note Sections Content Container -->
+      <div class="notes-display-body">
+
+        <!-- 1. STUDY GUIDE TAB (Overview & Sections) -->
+        <div id="sec-content" class="note-tab-content active">
+          <!-- Overview Card -->
+          <div class="note-card overview-card">
+            <div class="card-label">Executive Overview</div>
+            <div id="note-overview-text" class="overview-body editable-field" contenteditable="false"></div>
+          </div>
+
+          <!-- Structured Lecture Topics Container -->
+          <div id="note-sections-container"></div>
+
+          <!-- Concluding Summary Card -->
+          <div class="note-card summary-card">
+            <div class="card-label">Summary & Key Takeaways</div>
+            <div id="note-summary-text" class="summary-body editable-field" contenteditable="false"></div>
+          </div>
+        </div>
+
+        <!-- 2. FORMULAS TAB -->
+        <div id="sec-formulas" class="note-tab-content">
+          <div class="section-intro">
+            <h3>Mathematical Models & Formulas</h3>
+            <p>Formulas, equations, and algorithmic relations identified in this lecture.</p>
+          </div>
+          <div id="note-formulas-container" class="formulas-grid"></div>
+        </div>
+
+        <!-- 3. GLOSSARY TAB -->
+        <div id="sec-glossary" class="note-tab-content">
+          <div class="section-intro">
+            <h3>Lecture Glossary</h3>
+            <p>Definitions and meanings for technical terminology extracted from the transcript.</p>
+          </div>
+          <div id="note-glossary-container" class="glossary-grid"></div>
+        </div>
+
+        <!-- 4. REVISION Q&A TAB -->
+        <div id="sec-revision" class="note-tab-content">
+          <div class="section-intro">
+            <h3>Active Recall Revision</h3>
+            <p>Test your conceptual understanding. Click any question card to reveal the model answer.</p>
+          </div>
+          <div id="note-revision-container" class="revision-accordion-list"></div>
+        </div>
+
+        <!-- 5. INTERACTIVE QUIZ TAB -->
+        <div id="sec-quiz" class="note-tab-content">
+          <div class="quiz-header-card">
+            <div>
+              <h3>Interactive Self-Quiz</h3>
+              <p>Select your answer for instant feedback, grading, and explanations.</p>
+            </div>
+            <div class="quiz-score-badge" id="quiz-score-display">Score: 0 / 0</div>
+          </div>
+          <div id="note-quiz-container" class="quiz-questions-list"></div>
+        </div>
+
+        <!-- 6. CLEANED TRANSCRIPT TAB -->
+        <div id="sec-transcript" class="note-tab-content">
+          <div class="cleaning-stats-card" id="cleaning-stats-box"></div>
+          <div class="transcript-comparison-grid">
+            <div class="transcript-pane">
+              <h4>Processed & Cleaned Transcript</h4>
+              <pre id="display-cleaned-transcript" class="transcript-pre"></pre>
+            </div>
+            <div class="transcript-pane">
+              <h4>Original Raw Input</h4>
+              <pre id="display-raw-transcript" class="transcript-pre text-muted"></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. MY NOTES (HISTORY) VIEW -->
+    <!-- ========================================== -->
+    <section id="view-history" class="page-view">
+      <div class="view-header">
+        <div>
+          <h2>My Saved Notes</h2>
+          <p class="subtitle">Access, search, filter, and export your previous lecture study guides.</p>
+        </div>
+        <div class="library-stats-summary" id="library-stats-badge">
+          <span>0 Notes in Library</span>
+        </div>
+      </div>
+
+      <!-- History Filter Bar -->
+      <div class="history-controls">
+        <div class="search-input-wrapper">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="history-search-input" placeholder="Search saved notes by title or content..." oninput="debounceHistorySearch()">
+        </div>
+
+        <select id="history-subject-filter" class="form-select filter-select" onchange="loadNotesHistory()">
+          <option value="all">All Subjects</option>
+          <option value="Computer Science">Computer Science</option>
+          <option value="Physics">Physics</option>
+          <option value="Biology">Biology</option>
+          <option value="Chemistry">Chemistry</option>
+          <option value="Mathematics">Mathematics</option>
+          <option value="Engineering">Engineering</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+
+      <!-- History Notes Grid -->
+      <div id="history-notes-grid" class="history-grid"></div>
+
+      <!-- Empty History State -->
+      <div id="history-empty-state" class="empty-state" style="display:none;">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        </div>
+        <h3>No lecture notes found</h3>
+        <p>You haven't generated any study notes yet, or no notes matched your search filter.</p>
+        <button class="btn btn-primary btn-sm" onclick="navigateTo('generator')">Create Your First Note</button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 5. ABOUT VIEW -->
+    <!-- ========================================== -->
+    <section id="view-about" class="page-view">
+      <div class="about-hero">
+        <h2>About Smart Notes Generator</h2>
+        <p class="subtitle">An open-source AI study companion designed to bridge the gap between spoken academic lectures and structured revision mastery.</p>
+      </div>
+
+      <div class="about-content-card">
+        <h3>Project Mission</h3>
+        <p>University students spend hundreds of hours listening to fast-paced lectures, often struggling to transcribe key formulas, technical definitions, and core arguments simultaneously. <strong>Smart Notes Generator</strong> automates this workflow: it cleans verbal fillers, identifies topic boundaries, synthesizes concise revision notes, and generates practice questions for active recall.</p>
+
+        <h3 style="margin-top:24px;">Architecture & Technology Stack</h3>
+        <div class="tech-stack-pills">
+          <span class="tech-pill"><strong>Frontend:</strong> HTML5, Responsive Modern CSS, Vanilla ES6+</span>
+          <span class="tech-pill"><strong>Backend:</strong> Python 3, Flask, Werkzeug</span>
+          <span class="tech-pill"><strong>Speech-to-Text:</strong> OpenAI Whisper API</span>
+          <span class="tech-pill"><strong>AI LLM:</strong> GPT-4o-mini / Academic Semantic Engine</span>
+          <span class="tech-pill"><strong>Data Validation:</strong> Pydantic v2</span>
+          <span class="tech-pill"><strong>Database:</strong> SQLite3 with Full-Text Indexing</span>
+          <span class="tech-pill"><strong>PDF Generation:</strong> ReportLab Document Flowables</span>
+        </div>
+
+        <h3 style="margin-top:24px;">Workflow Architecture</h3>
+        <div class="workflow-steps">
+          <div class="wf-step">
+            <span class="wf-num">1</span>
+            <div><strong>Ingest</strong> Paste raw transcript or upload PDF/DOCX/Audio.</div>
+          </div>
+          <div class="wf-step">
+            <span class="wf-num">2</span>
+            <div><strong>Clean</strong> Strip spoken fillers ("um", "uh"), stuttering, and timestamps.</div>
+          </div>
+          <div class="wf-step">
+            <span class="wf-num">3</span>
+            <div><strong>Segment</strong> Divide long transcripts by discourse transitions.</div>
+          </div>
+          <div class="wf-step">
+            <span class="wf-num">4</span>
+            <div><strong>Synthesize</strong> Generate validated JSON notes with strict ground truth adherence.</div>
+          </div>
+          <div class="wf-step">
+            <span class="wf-num">5</span>
+            <div><strong>Study & Export</strong> Practice active recall quizzes and export as PDF/Markdown/TXT.</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:24px;">Academic Integrity & Security Notice</h3>
+        <p class="security-notice">
+          AI-generated notes should be used as study aids and revision supplements. While the system adheres strictly to the transcript source material, always cross-reference critical formulas and definitions with your course textbook and professor's syllabus. Audio files and temporary uploads are automatically sanitized and never stored indefinitely.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sample Loader Modal -->
+  <div id="sample-modal" class="modal-overlay" style="display:none;" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Choose a Sample Lecture Transcript</h3>
+        <button class="modal-close-btn" onclick="closeSampleModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">Load one of these pre-configured academic lectures to test the system immediately:</p>
+        <div id="sample-modal-list" class="sample-modal-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

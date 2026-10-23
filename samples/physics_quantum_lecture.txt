@@ -1,0 +1,24 @@
+[00:00:02] Welcome everyone to Physics 210, Modern Physics and Quantum Mechanics.
+[00:00:10] In today's session, we are going to explore the foundation of quantum theory: Wave-Particle Duality and the Heisenberg Uncertainty Principle.
+[00:00:23] Uh, you know, classical mechanics under Isaac Newton treated particles like tiny billiard balls and light purely as continuous waves.
+[00:00:36] However, experiments like the Photoelectric Effect and blackbody radiation proved that light exhibits quantized particle characteristics called photons.
+[00:00:50] The energy of a photon is given by Planck's equation: E = h * f, where 'h' is Planck's constant (6.626 x 10^-34 Joule-seconds) and 'f' is the frequency.
+
+[00:01:10] In 1924, Louis de Broglie posed a radical question: If light waves can behave like particles, can matter particles also behave like waves?
+[00:01:25] De Broglie proposed that any moving particle with momentum 'p' possesses an associated matter wavelength.
+[00:01:36] The De Broglie wavelength formula is: lambda = h / p, or lambda = h / (m * v).
+[00:01:48] This was experimentally confirmed in 1927 by Clinton Davisson and Lester Germer, who observed electron diffraction patterns when firing an electron beam at a nickel crystal lattice.
+
+[00:02:08] Now let's turn to Werner Heisenberg and the Uncertainty Principle.
+[00:02:16] The Heisenberg Uncertainty Principle states that it is fundamentally impossible to simultaneously determine both the exact position and the exact momentum of a quantum particle.
+[00:02:32] Mathematically, the inequality is: delta_x * delta_p >= h_bar / 2, where h_bar is the reduced Planck constant (h / 2*pi).
+[00:02:46] It is crucial to understand that this is not a limitation of our laboratory measuring instruments; it is an intrinsic physical property of wave mechanics.
+[00:03:00] Similarly, there is a time-energy uncertainty relation: delta_E * delta_t >= h_bar / 2, which allows for virtual particles and quantum fluctuations in the vacuum.
+
+[00:03:20] Moving on to Quantum Tunneling.
+[00:03:25] In classical physics, if a particle does not have enough kinetic energy to overcome a potential energy barrier, it bounces back 100% of the time.
+[00:03:38] But in quantum mechanics, because the wave function psi penetrates into the barrier, there is a non-zero probability that the particle emerges on the other side.
+[00:03:52] Quantum tunneling is defined as a quantum mechanical phenomenon where a subatomic particle passes through a potential energy barrier higher than its kinetic energy.
+[00:04:06] This phenomenon explains why our Sun shines via nuclear fusion, how Scanning Tunneling Microscopes (STM) image individual atoms, and why flash memory chips work.
+
+[00:04:25] In summary, quantum mechanics shows that at microscopic scales, matter exhibits both wave and particle characteristics, described by wavefunctions governed by the Uncertainty Principle and enabling phenomena like quantum tunneling.
