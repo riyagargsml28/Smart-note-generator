@@ -428,7 +428,7 @@ function renderCurrentNote() {
   const data = note.structured_notes;
 
   // Header badges & title
-  document.getElementById("note-view-title").innerText = data.title || note.title || "Lecture Notes";
+  document.getElementById("note-view-title").innerText = cleanTimestamps(data.title || note.title || "Lecture Notes");
   document.getElementById("note-view-subject").innerText = note.subject || "General";
   document.getElementById("note-view-level").innerText = `${(note.detail_level || "Medium").toUpperCase()} NOTES`;
   document.getElementById("note-view-words").innerText = `${(note.word_count || 0).toLocaleString()} words`;
@@ -437,7 +437,7 @@ function renderCurrentNote() {
   document.getElementById("note-view-engine").innerText = engineName;
 
   // Overview
-  document.getElementById("note-overview-text").innerText = data.overview || "No overview available.";
+  document.getElementById("note-overview-text").innerText = cleanTimestamps(data.overview || "No overview available.");
 
   // Sections
   const secContainer = document.getElementById("note-sections-container");
@@ -449,32 +449,41 @@ function renderCurrentNote() {
 
     let kpListHtml = "";
     (sec.key_points || []).forEach(kp => {
-      kpListHtml += `<li>${escapeHtml(kp)}</li>`;
+      const cleanKp = cleanTimestamps(kp);
+      if (cleanKp) kpListHtml += `<li>${escapeHtml(cleanKp)}</li>`;
     });
 
     let defsHtml = "";
     (sec.definitions || []).forEach(d => {
-      defsHtml += `
-        <div class="definition-box">
-          <div class="def-term">Definition: ${escapeHtml(d.term)}</div>
-          <div class="def-meaning">${escapeHtml(d.meaning)}</div>
-        </div>
-      `;
+      const cleanTerm = cleanTimestamps(d.term);
+      const cleanMeaning = cleanTimestamps(d.meaning);
+      if (cleanTerm) {
+        defsHtml += `
+          <div class="definition-box">
+            <div class="def-term">Definition: ${escapeHtml(cleanTerm)}</div>
+            <div class="def-meaning">${escapeHtml(cleanMeaning)}</div>
+          </div>
+        `;
+      }
     });
 
     let examplesHtml = "";
     (sec.examples || []).forEach(ex => {
-      examplesHtml += `
-        <div class="example-box">
-          <strong>Example:</strong> ${escapeHtml(ex)}
-        </div>
-      `;
+      const cleanEx = cleanTimestamps(ex);
+      if (cleanEx) {
+        examplesHtml += `
+          <div class="example-box">
+            <strong>Example:</strong> ${escapeHtml(cleanEx)}
+          </div>
+        `;
+      }
     });
 
+    const cleanHeading = cleanTimestamps(sec.heading || `Topic ${idx + 1}`);
     card.innerHTML = `
       <h3 class="section-heading">
         <span class="section-number">${idx + 1}.</span>
-        <span class="sec-title-text">${escapeHtml(sec.heading || `Topic ${idx + 1}`)}</span>
+        <span class="sec-title-text">${escapeHtml(cleanHeading)}</span>
       </h3>
       ${kpListHtml ? `<ul class="key-points-list">${kpListHtml}</ul>` : ""}
       ${defsHtml}
@@ -485,7 +494,7 @@ function renderCurrentNote() {
   });
 
   // Summary
-  document.getElementById("note-summary-text").innerText = data.summary || "No summary provided.";
+  document.getElementById("note-summary-text").innerText = cleanTimestamps(data.summary || "No summary provided.");
 
   // Formulas
   const formulas = data.formulas || [];
@@ -498,15 +507,15 @@ function renderCurrentNote() {
       if (typeof f === "object") {
         return `
           <div class="formula-card">
-            <div class="formula-name">${escapeHtml(f.name || "Formula")}</div>
-            <code class="formula-code">${escapeHtml(f.formula || "")}</code>
-            <div class="formula-exp">${escapeHtml(f.explanation || "")}</div>
+            <div class="formula-name">${escapeHtml(cleanTimestamps(f.name || "Formula"))}</div>
+            <code class="formula-code">${escapeHtml(cleanTimestamps(f.formula || ""))}</code>
+            <div class="formula-exp">${escapeHtml(cleanTimestamps(f.explanation || ""))}</div>
           </div>
         `;
       } else {
         return `
           <div class="formula-card">
-            <code class="formula-code">${escapeHtml(String(f))}</code>
+            <code class="formula-code">${escapeHtml(cleanTimestamps(String(f)))}</code>
           </div>
         `;
       }
@@ -524,14 +533,14 @@ function renderCurrentNote() {
       if (typeof g === "object") {
         return `
           <div class="glossary-card">
-            <div class="glossary-term">${escapeHtml(g.term || "Term")}</div>
-            <div class="glossary-meaning">${escapeHtml(g.meaning || g.definition || "")}</div>
+            <div class="glossary-term">${escapeHtml(cleanTimestamps(g.term || "Term"))}</div>
+            <div class="glossary-meaning">${escapeHtml(cleanTimestamps(g.meaning || g.definition || ""))}</div>
           </div>
         `;
       } else {
         return `
           <div class="glossary-card">
-            <div class="glossary-meaning">${escapeHtml(String(g))}</div>
+            <div class="glossary-meaning">${escapeHtml(cleanTimestamps(String(g)))}</div>
           </div>
         `;
       }
@@ -545,18 +554,22 @@ function renderCurrentNote() {
   if (revQuestions.length === 0) {
     rContainer.innerHTML = `<p class="text-muted">No revision questions available.</p>`;
   } else {
-    rContainer.innerHTML = revQuestions.map((q, i) => `
+    rContainer.innerHTML = revQuestions.map((q, i) => {
+      const cleanQ = cleanTimestamps(q.question);
+      const cleanA = cleanTimestamps(q.answer);
+      return `
       <div class="rev-card" id="rev-card-${i}">
         <div class="rev-question-header" onclick="toggleRevisionCard(${i})">
-          <span class="rev-q-text"><strong>Q${i + 1}:</strong> ${escapeHtml(q.question)}</span>
+          <span class="rev-q-text"><strong>Q${i + 1}:</strong> ${escapeHtml(cleanQ)}</span>
           <svg class="rev-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </div>
         <div class="rev-answer-body">
           <strong>Model Answer:</strong>
-          <p style="margin-top:0.35rem;">${escapeHtml(q.answer)}</p>
+          <p style="margin-top:0.35rem;">${escapeHtml(cleanA)}</p>
         </div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
 
   // Interactive Quiz (MCQs)
@@ -585,15 +598,22 @@ function renderQuizSection(mcqs) {
   }
 
   qContainer.innerHTML = mcqs.map((mcq, qIdx) => {
-    const optsHtml = (mcq.options || []).map((opt, optIdx) => `
-      <button class="quiz-opt-btn" onclick="handleQuizAnswer(${qIdx}, '${escapeHtml(opt)}', '${escapeHtml(mcq.correct_answer)}', '${escapeHtml(mcq.explanation || '')}')">
-        ${escapeHtml(opt)}
+    const cleanQ = cleanTimestamps(mcq.question);
+    const cleanAns = cleanTimestamps(mcq.correct_answer);
+    const cleanExp = cleanTimestamps(mcq.explanation || '');
+
+    const optsHtml = (mcq.options || []).map((opt, optIdx) => {
+      const cleanOpt = cleanTimestamps(opt);
+      return `
+      <button class="quiz-opt-btn" onclick="handleQuizAnswer(${qIdx}, '${escapeHtml(cleanOpt)}', '${escapeHtml(cleanAns)}', '${escapeHtml(cleanExp)}')">
+        ${escapeHtml(cleanOpt)}
       </button>
-    `).join("");
+    `;
+    }).join("");
 
     return `
       <div class="quiz-card" id="quiz-card-${qIdx}">
-        <div class="quiz-q-title"><strong>Question ${qIdx + 1}:</strong> ${escapeHtml(mcq.question)}</div>
+        <div class="quiz-q-title"><strong>Question ${qIdx + 1}:</strong> ${escapeHtml(cleanQ)}</div>
         <div class="quiz-options-grid">${optsHtml}</div>
         <div class="quiz-feedback-box" id="quiz-feedback-${qIdx}" style="display:none;"></div>
       </div>
@@ -974,4 +994,35 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function cleanTimestamps(text) {
+  if (!text) return "";
+  let str = String(text);
+  let optPrefix = "";
+  const optMatch = str.match(/^([A-Da-d][\)\.]|\d+[\)\.])\s*/);
+  if (optMatch) {
+    optPrefix = optMatch[0];
+    str = str.substring(optPrefix.length);
+  }
+  str = str.replace(/\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*(?:-->|->|–|-)\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?/gi, " ");
+  str = str.replace(/\b(?:at|on|in|around|timestamp|timecode)\s*\[\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\]/gi, " ");
+  str = str.replace(/\b(?:at|on|in|around|timestamp|timecode)\s*\(\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\)/gi, " ");
+  str = str.replace(/\[\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\]/gi, " ");
+  str = str.replace(/\(\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\)/gi, " ");
+  str = str.replace(/\<\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\>/gi, " ");
+  str = str.replace(/\b\d{1,2}:\d{2}:\d{2}(?:[\.,]\d{1,3})?\b/gi, " ");
+  str = str.replace(/\b(?:at|timestamp|timecode)\s+\[?\d{1,2}:\d{2}(?::\d{2})?\]?\b/gi, " ");
+  str = str.replace(/^\s*(?:at\s+|timestamp\s*:?\s*)?\d{1,2}:\d{2}(?::\d{2})?\s*[-–:]?\s*/gi, " ");
+  str = str.replace(/(?<=\s)\d{1,2}:\d{2}(?=\s|[-–:,\.]|$)/g, " ");
+  str = str.replace(/^\s*(?:[A-Z][A-Za-z\.\s]{1,25}|Speaker\s*\d+|Prof(?:essor)?\.?\s*[A-Z][a-z]+|Instructor|Student\s*\d?)\s*:\s*/i, "");
+  str = str.replace(/\b(?:at|on|in|around)\s*([,.:;?!])/gi, "$1");
+  str = str.replace(/[ \t]+/g, " ");
+  str = str.replace(/\s+([,.:;?!])/g, "$1");
+  str = str.replace(/^\s*[,;:\-\.]\s*/, "");
+  str = str.trim();
+  if (str && str[0] === str[0].toLowerCase()) {
+    str = str[0].toUpperCase() + str.slice(1);
+  }
+  return (optPrefix + str).trim();
 }

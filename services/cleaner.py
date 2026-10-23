@@ -36,19 +36,59 @@ class TranscriptCleaner:
         r"\bhmm+\b",
     ]
 
-    # Timestamp patterns:
-    # 00:00:00.000 --> 00:00:05.000 (VTT / SRT)
-    # [00:12:34], (12:45), [1:23], 04:12 -
+    # Comprehensive Timestamp Patterns:
+    # 00:00:00.000 --> 00:00:05.000 (VTT / SRT time ranges)
+    # [00:12:34], (12:45), <01:23:45>, [1:23]
+    # Standalone HH:MM:SS or MM:SS at line start, within dialogue, or after prepositions
     TIMESTAMP_PATTERNS = [
-        r"\d{1,2}:\d{2}:\d{2}[\.,]\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[\.,]\d{3}",
-        r"\[\d{1,2}:\d{2}(?::\d{2})?\]",
-        r"\(\d{1,2}:\d{2}(?::\d{2})?\)",
-        r"^\s*\d{1,2}:\d{2}(?::\d{2})?\s*[-–:]\s*",
-        r"^\s*\d+\s*$",  # SRT line index numbers
+        # VTT/SRT arrow time ranges
+        r"\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*(?:-->|->|–|-)\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?",
+        # Prepositions immediately preceding bracketed timestamps: 'at [00:12:34]', 'in (12:45)'
+        r"\b(?:at|on|in|around|timestamp|timecode)\s*\[\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\]",
+        r"\b(?:at|on|in|around|timestamp|timecode)\s*\(\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\)",
+        # Bracketed or parenthesized timestamps anywhere
+        r"\[\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\]",
+        r"\(\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\)",
+        r"\<\s*\d{1,2}:\d{2}(?::\d{2})?(?:[\.,]\d{1,3})?\s*\>",
+        # Standalone HH:MM:SS (e.g. 00:12:45, 01:23:45.678)
+        r"\b\d{1,2}:\d{2}:\d{2}(?:[\.,]\d{1,3})?\b",
+        # Timestamps with prepositions or labels: 'at 04:15', 'timestamp: 12:30'
+        r"\b(?:at|timestamp|timecode)\s+\[?\d{1,2}:\d{2}(?::\d{2})?\]?\b",
+        # Line-start or hyphen-separated timestamps: '00:05 - ' or '12:34: ' or '04:15 '
+        r"^\s*(?:at\s+|timestamp\s*:?\s*)?\d{1,2}:\d{2}(?::\d{2})?\s*[-–:]?\s*",
+        # Standalone MM:SS bounded by whitespace or punctuation
+        r"(?<=\s)\d{1,2}:\d{2}(?=\s|[-–:,\.]|$)",
+        r"^\s*\d{1,2}:\d{2}(?=\s|[-–:,\.]|$)",
+        # SRT line index numbers
+        r"^\s*\d+\s*$",
     ]
 
     # Speaker labels e.g. "Professor Smith:", "Speaker 1:", "Lecturer [01:23]:"
-    SPEAKER_PATTERN = r"^\s*(?:[A-Z][A-Za-z\.\s]{1,25}|Speaker\s*\d+|Prof(?:essor)?\.?\s*[A-Z][a-z]+|Instructor|Student\s*\d?)\s*(?:\[\d{1,2}:\d{2}\])?\s*:\s*"
+    SPEAKER_PATTERN = r"^\s*(?:[A-Z][A-Za-z\.\s]{1,25}|Speaker\s*\d+|Prof(?:essor)?\.?\s*[A-Z][a-z]+|Instructor|Student\s*\d?)\s*(?:\[\d{1,2}:\d{2}(?::\d{2})?\])?\s*:\s*"
+
+    @classmethod
+    def clean_timestamps(cls, text: str) -> str:
+        """
+        Removes all time codes, timestamps, and residual time markers from text.
+        """
+        if not text:
+            return ""
+
+        res = text
+        for pattern in cls.TIMESTAMP_PATTERNS:
+            res = re.sub(pattern, " ", res, flags=re.MULTILINE | re.IGNORECASE)
+
+        # Remove dangling prepositions before punctuation (e.g., 'discussed at ,' -> 'discussed,')
+        res = re.sub(r"\b(?:at|on|in|around)\s*([,.:;?!])", r"\1", res, flags=re.IGNORECASE)
+
+        # Clean punctuation and spacing
+        res = re.sub(r"[ \t]+", " ", res)
+        res = re.sub(r"\s+([,.:;?!])", r"\1", res)
+        res = re.sub(r"^\s*[,;:\-\.]\s*", "", res)
+        res = res.strip()
+        if res and res[0].islower():
+            res = res[0].upper() + res[1:]
+        return res
 
     @classmethod
     def clean(cls, text: str, remove_fillers: bool = True, remove_timestamps: bool = True) -> Tuple[str, Dict[str, Any]]:
@@ -81,7 +121,8 @@ class TranscriptCleaner:
         # Step 2: Remove timestamps and speaker labels if requested
         if remove_timestamps:
             for pattern in cls.TIMESTAMP_PATTERNS:
-                text = re.sub(pattern, " ", text, flags=re.MULTILINE)
+                text = re.sub(pattern, " ", text, flags=re.MULTILINE | re.IGNORECASE)
+
             # Remove speaker labels line-by-line
             lines = text.split("\n")
             cleaned_lines = []
@@ -89,6 +130,9 @@ class TranscriptCleaner:
                 cleaned_line = re.sub(cls.SPEAKER_PATTERN, "", line, flags=re.IGNORECASE)
                 cleaned_lines.append(cleaned_line)
             text = "\n".join(cleaned_lines)
+
+            # Remove dangling prepositions before punctuation
+            text = re.sub(r"\b(?:at|on|in|around)\s*([,.:;?!])", r"\1", text, flags=re.IGNORECASE)
 
         # Step 3: Remove filler phrases and words if requested
         if remove_fillers:
@@ -111,9 +155,7 @@ class TranscriptCleaner:
                 text = re.sub(inj, "", text, flags=re.MULTILINE | re.IGNORECASE)
 
         # Step 4: Remove stuttering / duplicate consecutive identical words (e.g., "the the", "is is")
-        # Matches word followed by whitespace and the exact same word
         text = re.sub(r"\b([a-zA-Z]{2,})\s+\1\b", r"\1", text, flags=re.IGNORECASE)
-        # Repeat once to catch triple words ("the the the" -> "the")
         text = re.sub(r"\b([a-zA-Z]{2,})\s+\1\b", r"\1", text, flags=re.IGNORECASE)
 
         # Step 5: Clean punctuation artifacts (e.g., double commas, hanging commas before periods)

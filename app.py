@@ -198,11 +198,11 @@ def generate_notes():
         detail_level = "medium"
 
     try:
-        # Step 1: Clean Transcript
+        # Step 1: Clean Transcript (timestamps are always purged for notes, Q&A, and quizzes)
         cleaned_transcript, cleaning_stats = TranscriptCleaner.clean(
             raw_transcript,
             remove_fillers=clean_fillers,
-            remove_timestamps=remove_timestamps
+            remove_timestamps=True
         )
 
         effective_transcript = cleaned_transcript if cleaned_transcript else raw_transcript

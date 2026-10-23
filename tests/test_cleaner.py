@@ -34,6 +34,22 @@ class TestTranscriptCleaner(unittest.TestCase):
         self.assertIn("Welcome class", cleaned)
         self.assertIn("What is a page fault?", cleaned)
 
+    def test_various_timestamp_formats(self):
+        test_samples = [
+            ("[00:00:05] Good morning everyone", "Good morning everyone"),
+            ("(12:34) The concept is simple", "The concept is simple"),
+            ("00:01:23.456 --> 00:01:28.123 Hello world", "Hello world"),
+            ("At 04:15 we discussed paging", "We discussed paging"),
+            ("1:23 - The page fault occurs", "The page fault occurs"),
+            ("[1:23] Page fault trap", "Page fault trap"),
+            ("00:01:23 The MMU translates", "The MMU translates")
+        ]
+        for raw, expected_substr in test_samples:
+            cleaned = TranscriptCleaner.clean_timestamps(raw)
+            self.assertIn(expected_substr, cleaned)
+            self.assertNotIn("[00:", cleaned)
+            self.assertNotIn("(12:", cleaned)
+
     def test_empty_string(self):
         cleaned, stats = TranscriptCleaner.clean("")
         self.assertEqual(cleaned, "")

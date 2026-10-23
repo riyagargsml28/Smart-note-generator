@@ -76,7 +76,7 @@ class NotesExporter:
         lines = []
         title = notes.get("title", "Lecture Notes")
         lines.append(f"# {title}\n")
-        lines.append(f"**Subject:** {subject} | **Date:** {notes.get('_meta', {}).get('date', 'Recent')}\n")
+        lines.append(f"**Subject:** {subject}\n")
 
         # Overview
         overview = notes.get("overview", "")
