@@ -2,7 +2,7 @@
 Database Operations Module.
 Manages persistent SQLite storage for lecture transcripts, generated study notes,
 history search, editing, and analytics.
-Ensures connections are properly closed to avoid file-locking on Windows.
+Supports language selection (English, Hindi, and Bilingual) with automatic schema migration.
 """
 
 import sqlite3
@@ -40,7 +40,7 @@ class NotesDatabase:
             conn.close()
 
     def _init_db(self):
-        """Initializes tables and indexes if they do not exist."""
+        """Initializes tables, indexes, and performs migrations if needed."""
         with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -49,6 +49,7 @@ class NotesDatabase:
                     title TEXT NOT NULL,
                     subject TEXT NOT NULL DEFAULT 'General',
                     detail_level TEXT NOT NULL DEFAULT 'medium',
+                    language TEXT NOT NULL DEFAULT 'english',
                     raw_transcript TEXT NOT NULL,
                     cleaned_transcript TEXT,
                     structured_notes TEXT NOT NULL,
@@ -57,6 +58,15 @@ class NotesDatabase:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+
+            # Auto-migration: check if 'language' column exists in existing database
+            cursor.execute("PRAGMA table_info(notes)")
+            cols = [row["name"] for row in cursor.fetchall()]
+            if "language" not in cols:
+                try:
+                    cursor.execute("ALTER TABLE notes ADD COLUMN language TEXT NOT NULL DEFAULT 'english'")
+                except Exception:
+                    pass
 
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_notes_subject ON notes (subject);
@@ -73,7 +83,8 @@ class NotesDatabase:
         raw_transcript: str,
         cleaned_transcript: str,
         structured_notes: Dict[str, Any],
-        word_count: int
+        word_count: int,
+        language: str = "english"
     ) -> int:
         """
         Saves a newly generated note to the database.
@@ -88,12 +99,12 @@ class NotesDatabase:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO notes (
-                    title, subject, detail_level, raw_transcript,
+                    title, subject, detail_level, language, raw_transcript,
                     cleaned_transcript, structured_notes, word_count,
                     created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                title, subject, detail_level, raw_transcript,
+                title, subject, detail_level, language, raw_transcript,
                 cleaned_transcript, notes_json, word_count, now, now
             ))
             return cursor.lastrowid
@@ -112,18 +123,23 @@ class NotesDatabase:
         self,
         search_query: Optional[str] = None,
         subject_filter: Optional[str] = None,
+        language_filter: Optional[str] = None,
         limit: int = 50,
         offset: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        Lists stored notes with optional search query, subject filter, and pagination.
+        Lists stored notes with optional search query, subject/language filter, and pagination.
         """
-        query = "SELECT id, title, subject, detail_level, word_count, created_at, updated_at FROM notes WHERE 1=1"
+        query = "SELECT id, title, subject, detail_level, language, word_count, created_at, updated_at FROM notes WHERE 1=1"
         params = []
 
         if subject_filter and subject_filter.strip() and subject_filter.lower() != "all":
             query += " AND LOWER(subject) = LOWER(?)"
             params.append(subject_filter.strip())
+
+        if language_filter and language_filter.strip() and language_filter.lower() != "all":
+            query += " AND LOWER(language) = LOWER(?)"
+            params.append(language_filter.strip())
 
         if search_query and search_query.strip():
             query += " AND (LOWER(title) LIKE LOWER(?) OR LOWER(structured_notes) LIKE LOWER(?))"
@@ -145,6 +161,7 @@ class NotesDatabase:
                     "title": r["title"],
                     "subject": r["subject"],
                     "detail_level": r["detail_level"],
+                    "language": r["language"] if "language" in r.keys() else "english",
                     "word_count": r["word_count"],
                     "created_at": r["created_at"],
                     "updated_at": r["updated_at"]
@@ -156,9 +173,10 @@ class NotesDatabase:
         note_id: int,
         title: Optional[str] = None,
         structured_notes: Optional[Dict[str, Any]] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        language: Optional[str] = None
     ) -> bool:
-        """Updates note title, subject, or structured JSON content."""
+        """Updates note title, subject, language, or structured JSON content."""
         updates = []
         params = []
         now = datetime.now(timezone.utc).isoformat()
@@ -170,6 +188,10 @@ class NotesDatabase:
         if subject is not None:
             updates.append("subject = ?")
             params.append(subject.strip())
+
+        if language is not None:
+            updates.append("language = ?")
+            params.append(language.strip().lower())
 
         if structured_notes is not None:
             updates.append("structured_notes = ?")
@@ -206,10 +228,14 @@ class NotesDatabase:
             cursor.execute("SELECT subject, COUNT(*) as count FROM notes GROUP BY subject ORDER BY count DESC")
             subjects = [{"subject": row["subject"], "count": row["count"]} for row in cursor.fetchall()]
 
+            cursor.execute("SELECT language, COUNT(*) as count FROM notes GROUP BY language ORDER BY count DESC")
+            languages = [{"language": row["language"], "count": row["count"]} for row in cursor.fetchall()]
+
             return {
                 "total_notes": total_notes,
                 "total_words_processed": total_words,
-                "subjects": subjects
+                "subjects": subjects,
+                "languages": languages
             }
 
     @staticmethod
@@ -227,6 +253,7 @@ class NotesDatabase:
             "title": row["title"],
             "subject": row["subject"],
             "detail_level": row["detail_level"],
+            "language": row["language"] if "language" in row.keys() else "english",
             "raw_transcript": row["raw_transcript"],
             "cleaned_transcript": row["cleaned_transcript"],
             "structured_notes": structured,

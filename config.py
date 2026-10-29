@@ -32,14 +32,21 @@ class Config:
     ALLOWED_DOCUMENT_EXTENSIONS = {"txt", "pdf", "docx", "md"}
     ALLOWED_AUDIO_EXTENSIONS = {"mp3", "wav", "m4a", "webm", "ogg", "flac", "aac"}
 
-    # AI & Speech Recognition settings
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
-    OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-    WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "whisper-1")
+    # AI & Speech Recognition settings (Google Gemini 3.5 Flash)
+    GEMINI_API_KEY = (
+        os.environ.get("GEMINI_API_KEY", "")
+        or os.environ.get("OPENAI_API_KEY", "")
+    ).strip()
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash").strip()
+
+    # Backwards-compatibility aliases
+    OPENAI_API_KEY = GEMINI_API_KEY
+    OPENAI_MODEL = GEMINI_MODEL
+    WHISPER_MODEL = GEMINI_MODEL
 
     # Fallback / Offline Demo Mode
     # If True, when no API key is provided, the system uses the intelligent
-    # rule-based heuristic generator so beginners can test the app without an OpenAI account.
+    # rule-based heuristic generator so beginners can test the app without an external account.
     ALLOW_OFFLINE_FALLBACK = os.environ.get("ALLOW_OFFLINE_FALLBACK", "True").lower() in ("true", "1", "yes")
 
     # Note Detail Level presets

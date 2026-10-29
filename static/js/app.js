@@ -70,18 +70,231 @@ function switchNotesSection(sectionId) {
 }
 
 /* ==========================================================================
-   2. Configuration & Initialization
+   2. Configuration & API Status Management
    ========================================================================== */
 async function loadConfigStatus() {
+  const statusBtnText = document.getElementById("api-status-btn-text");
+  const statusDot = document.getElementById("api-status-dot");
+
   try {
     const res = await fetch("/api/config-status");
     if (res.ok) {
       const data = await res.json();
+      AppState.config = data;
       console.log("[Status] Config loaded:", data);
+
+      if (data.gemini_configured) {
+        if (statusBtnText) statusBtnText.innerText = "Gemini 3.5 Flash • Ready";
+        if (statusDot) {
+          statusDot.className = "status-indicator-dot connected";
+          statusDot.title = "Google Gemini 3.5 Flash API Connected";
+        }
+      } else {
+        if (statusBtnText) statusBtnText.innerText = "Gemini API • Not Configured";
+        if (statusDot) {
+          statusDot.className = "status-indicator-dot not-configured";
+          statusDot.title = "Running in Offline Heuristic Mode";
+        }
+      }
     }
   } catch (err) {
     console.warn("[Warning] Could not load config status:", err);
+    if (statusBtnText) statusBtnText.innerText = "API Status Error";
+    if (statusDot) statusDot.className = "status-indicator-dot error";
   }
+}
+
+function openApiStatusModal() {
+  const modal = document.getElementById("api-status-modal");
+  if (!modal) return;
+
+  const cfg = AppState.config || {};
+  const isConfigured = Boolean(cfg.gemini_configured);
+
+  const badge = document.getElementById("modal-api-badge");
+  const modelName = document.getElementById("modal-model-name");
+  const configStatus = document.getElementById("modal-config-status");
+  const healthStatus = document.getElementById("modal-connection-health");
+  const troubleshoot = document.getElementById("api-troubleshoot-box");
+  const resultBox = document.getElementById("api-test-result-box");
+
+  if (modelName) modelName.innerText = cfg.active_llm_model || "gemini-3.5-flash";
+  if (configStatus) {
+    configStatus.innerHTML = isConfigured
+      ? `<span style="color:#059669;">✅ Configured in .env</span>`
+      : `<span style="color:#d97706;">⚠️ Missing Key (Heuristic Mode)</span>`;
+  }
+
+  if (badge) {
+    badge.className = isConfigured ? "badge" : "badge bg-warning";
+    badge.style.backgroundColor = isConfigured ? "#10b981" : "#f59e0b";
+    badge.style.color = "#fff";
+    badge.innerText = isConfigured ? "Key Present" : "Key Missing";
+  }
+
+  if (!isConfigured && troubleshoot) {
+    troubleshoot.style.display = "block";
+  } else if (troubleshoot) {
+    troubleshoot.style.display = "none";
+  }
+
+  if (resultBox) resultBox.style.display = "none";
+
+  modal.style.display = "flex";
+}
+
+function closeApiStatusModal() {
+  const modal = document.getElementById("api-status-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function closeApiModalOnBackdrop(e) {
+  if (e.target.id === "api-status-modal") {
+    closeApiStatusModal();
+  }
+}
+
+async function runLiveApiTest() {
+  const testBtn = document.getElementById("btn-run-api-test");
+  const resultBox = document.getElementById("api-test-result-box");
+  const healthStatus = document.getElementById("modal-connection-health");
+  const latencyVal = document.getElementById("modal-latency-val");
+  const troubleshoot = document.getElementById("api-troubleshoot-box");
+  const statusBtnText = document.getElementById("api-status-btn-text");
+  const statusDot = document.getElementById("api-status-dot");
+
+  if (testBtn) {
+    testBtn.disabled = true;
+    testBtn.innerHTML = `<span>⏳ Pinging Gemini...</span>`;
+  }
+  if (resultBox) {
+    resultBox.style.display = "block";
+    resultBox.className = "api-result-box";
+    resultBox.innerHTML = `<em>Testing connection to Google Gemini 3.5 Flash...</em>`;
+  }
+
+  const customKey = (document.getElementById("custom-test-key-input")?.value || "").trim();
+
+  try {
+    const res = await fetch("/api/test-connection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(customKey ? { api_key: customKey } : {})
+    });
+    const data = await res.json();
+
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span>Test Connection Now</span>
+      `;
+    }
+
+    if (data.status === "connected") {
+      if (healthStatus) healthStatus.innerHTML = `<span style="color:#059669;">🟢 Online & Operational</span>`;
+      if (latencyVal) latencyVal.innerText = `${data.latency_ms} ms`;
+      if (troubleshoot) troubleshoot.style.display = "none";
+
+      if (statusBtnText) statusBtnText.innerText = `Gemini 3.5 Flash (${data.latency_ms}ms)`;
+      if (statusDot) statusDot.className = "status-indicator-dot connected";
+
+      if (resultBox) {
+        resultBox.className = "api-result-box success";
+        resultBox.innerHTML = `
+          <strong>✅ Connection Successful!</strong>
+          <div style="margin-top:4px;">${data.message}</div>
+          <div style="font-size:0.8rem; margin-top:4px; opacity:0.85;">Round-trip latency: <strong>${data.latency_ms} ms</strong> | Ping response: "<code>${data.sample_response || 'OK'}</code>"</div>
+        `;
+      }
+      showToast("Gemini 3.5 Flash API is online and fully functional!", "success");
+
+    } else if (data.status === "not_configured") {
+      if (healthStatus) healthStatus.innerHTML = `<span style="color:#d97706;">⚠️ Offline (Not Configured)</span>`;
+      if (latencyVal) latencyVal.innerText = `--`;
+      if (troubleshoot) troubleshoot.style.display = "block";
+
+      if (statusBtnText) statusBtnText.innerText = "Gemini API • Not Configured";
+      if (statusDot) statusDot.className = "status-indicator-dot not-configured";
+
+      if (resultBox) {
+        resultBox.className = "api-result-box error";
+        resultBox.innerHTML = `
+          <strong>⚠️ API Key Not Configured</strong>
+          <pre>${data.error}</pre>
+          <div style="margin-top:6px;"><strong>Suggestion:</strong> ${data.suggestion}</div>
+        `;
+      }
+      showToast("Gemini API key is not configured.", "warning");
+
+    } else {
+      // Error status
+      if (healthStatus) healthStatus.innerHTML = `<span style="color:#dc2626;">❌ Connection Failed</span>`;
+      if (latencyVal) latencyVal.innerText = `Failed`;
+      if (troubleshoot) troubleshoot.style.display = "block";
+
+      if (statusBtnText) statusBtnText.innerText = "Gemini API • Error";
+      if (statusDot) statusDot.className = "status-indicator-dot error";
+
+      if (resultBox) {
+        resultBox.className = "api-result-box error";
+        resultBox.innerHTML = `
+          <strong>❌ API Connection Error (${data.error_type || 'Error'}):</strong>
+          <pre>${data.error}</pre>
+          <div style="margin-top:6px;"><strong>Suggestion:</strong> ${data.suggestion}</div>
+        `;
+      }
+      showToast("Gemini API test failed. Check diagnostics.", "error");
+    }
+
+  } catch (err) {
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.innerHTML = `<span>Test Connection Now</span>`;
+    }
+    if (healthStatus) healthStatus.innerHTML = `<span style="color:#dc2626;">❌ Network Error</span>`;
+    if (troubleshoot) troubleshoot.style.display = "block";
+
+    if (statusBtnText) statusBtnText.innerText = "API Connection Error";
+    if (statusDot) statusDot.className = "status-indicator-dot error";
+
+    if (resultBox) {
+      resultBox.className = "api-result-box error";
+      resultBox.innerHTML = `
+        <strong>❌ Network / Server Error:</strong>
+        <pre>${err.message}</pre>
+      `;
+    }
+    showToast(`Network error: ${err.message}`, "error");
+  }
+}
+
+/* ==========================================================================
+   Error Display for Incomplete Note Generation
+   ========================================================================== */
+function showGenerationError(err) {
+  const card = document.getElementById("generation-error-card");
+  const title = document.getElementById("gen-error-title");
+  const sub = document.getElementById("gen-error-sub");
+  const text = document.getElementById("gen-error-text");
+  const badge = document.getElementById("gen-error-badge");
+
+  if (!card) return;
+
+  const errorMessage = typeof err === "string" ? err : (err.message || JSON.stringify(err));
+
+  if (title) title.innerText = "Note Generation Incomplete / Failed";
+  if (sub) sub.innerText = "The synthesis pipeline could not finish. View the exact failure output below:";
+  if (text) text.innerText = errorMessage;
+  if (badge) badge.innerText = "Incomplete";
+
+  card.style.display = "block";
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function dismissGenerationError() {
+  const card = document.getElementById("generation-error-card");
+  if (card) card.style.display = "none";
 }
 
 async function loadSamplesList() {
@@ -336,10 +549,16 @@ async function generateNotes() {
   const detailRadio = document.querySelector('input[name="detail_level"]:checked');
   const detailLevel = detailRadio ? detailRadio.value : "medium";
 
+  // Get notes language (both, english, hindi)
+  const langRadio = document.querySelector('input[name="note_language"]:checked');
+  const noteLanguage = langRadio ? langRadio.value : "both";
+
   // Pre-processing options
   const cleanFillers = document.getElementById("clean-fillers-check").checked;
   const removeTimestamps = document.getElementById("remove-timestamps-check").checked;
   const enableSegmentation = document.getElementById("enable-segmentation-check").checked;
+
+  dismissGenerationError();
 
   // UI Progress Animation
   const progressBox = document.getElementById("generation-progress");
@@ -354,7 +573,7 @@ async function generateNotes() {
 
   setTimeout(() => updateProgress(45, "Cleaning verbal fillers and formatting timestamps..."), 400);
   setTimeout(() => updateProgress(70, "Segmenting topics and extracting key concepts..."), 900);
-  setTimeout(() => updateProgress(88, "Synthesizing structured notes, formulas, and quiz questions..."), 1500);
+  setTimeout(() => updateProgress(88, "Synthesizing notes via Gemini 3.5 Flash in requested language..."), 1500);
 
   try {
     const res = await fetch("/api/generate-notes", {
@@ -364,6 +583,7 @@ async function generateNotes() {
         transcript: rawTranscript,
         subject: subject,
         detail_level: detailLevel,
+        language: noteLanguage,
         clean_fillers: cleanFillers,
         remove_timestamps: removeTimestamps,
         enable_segmentation: enableSegmentation
@@ -383,6 +603,7 @@ async function generateNotes() {
       title: data.title,
       subject: data.subject,
       detail_level: data.detail_level,
+      language: data.language || noteLanguage,
       word_count: data.word_count,
       raw_transcript: rawTranscript,
       cleaning_stats: data.cleaning_stats,
@@ -407,6 +628,7 @@ async function generateNotes() {
   } catch (err) {
     progressBox.style.display = "none";
     generateBtn.disabled = false;
+    showGenerationError(err);
     showToast(err.message, "error");
   }
 }
@@ -432,6 +654,13 @@ function renderCurrentNote() {
   document.getElementById("note-view-subject").innerText = note.subject || "General";
   document.getElementById("note-view-level").innerText = `${(note.detail_level || "Medium").toUpperCase()} NOTES`;
   document.getElementById("note-view-words").innerText = `${(note.word_count || 0).toLocaleString()} words`;
+
+  const lang = (note.language || data._meta?.language || "both").toLowerCase();
+  let langLabel = "🌐 Bilingual (EN + HI)";
+  if (lang === "hindi") langLabel = "🇮🇳 Hindi (हिंदी)";
+  else if (lang === "english") langLabel = "🇬🇧 English";
+  const langEl = document.getElementById("note-view-language");
+  if (langEl) langEl.innerText = langLabel;
 
   const engineName = data._meta ? data._meta.engine : "Academic AI";
   document.getElementById("note-view-engine").innerText = engineName;
@@ -879,6 +1108,7 @@ function renderHistoryGrid(notes) {
         <div class="history-card-top">
           <div class="history-card-tags">
             <span class="tag tag-subject">${escapeHtml(note.subject || "General")}</span>
+            <span class="tag tag-lang">${escapeHtml(note.language === "hindi" ? "🇮🇳 हिन्दी" : (note.language === "both" || note.language === "bilingual" ? "🌐 EN + HI" : "🇬🇧 EN"))}</span>
             <span class="tag tag-detail">${escapeHtml(note.detail_level || "Medium")}</span>
           </div>
           <h3 class="history-card-title" onclick="openNoteFromHistory(${note.id})">

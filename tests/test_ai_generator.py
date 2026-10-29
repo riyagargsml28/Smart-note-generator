@@ -121,6 +121,12 @@ class TestAINotesGenerator(unittest.TestCase):
             self.assertFalse(timestamp_regex.search(mcq["correct_answer"]), f"Timestamp found in MCQ correct_answer: {mcq['correct_answer']}")
             self.assertFalse(timestamp_regex.search(mcq["explanation"]), f"Timestamp found in MCQ explanation: {mcq['explanation']}")
 
+    def test_gemini_model_configuration(self):
+        """Verifies Gemini 3.5 Flash model configuration and client setup."""
+        gen = AINotesGenerator(api_key="mock_key", model="gemini-3.5-flash")
+        self.assertEqual(gen.model, "gemini-3.5-flash")
+        self.assertIsNotNone(gen.client)
+
 
 if __name__ == "__main__":
     unittest.main()

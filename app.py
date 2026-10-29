@@ -7,10 +7,19 @@ SQLite persistence, and PDF/Markdown/TXT exports.
 
 import os
 import io
+import sys
 import json
+import time
 from pathlib import Path
 from flask import Flask, request, jsonify, render_template, send_file, make_response
 from werkzeug.utils import secure_filename
+
+# Ensure UTF-8 output encoding for console logs
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 from config import Config
 from database import NotesDatabase
@@ -27,8 +36,8 @@ app.config.from_object(Config)
 
 # Initialize database and services
 db = NotesDatabase(Config.DATABASE_PATH)
-ai_generator = AINotesGenerator(api_key=Config.OPENAI_API_KEY, model=Config.OPENAI_MODEL)
-audio_transcriber = AudioTranscriber(api_key=Config.OPENAI_API_KEY, model=Config.WHISPER_MODEL)
+ai_generator = AINotesGenerator(api_key=Config.GEMINI_API_KEY, model=Config.GEMINI_MODEL)
+audio_transcriber = AudioTranscriber(api_key=Config.GEMINI_API_KEY, model=Config.GEMINI_MODEL)
 
 
 # ==========================================
@@ -47,15 +56,62 @@ def index():
 
 @app.route("/api/config-status", methods=["GET"])
 def config_status():
-    """Returns application configuration status and available AI engines."""
-    has_openai = bool(Config.OPENAI_API_KEY)
+    """Returns application configuration status and active AI engines."""
+    has_gemini = bool(Config.GEMINI_API_KEY)
     return jsonify({
-        "openai_configured": has_openai,
-        "active_llm_model": Config.OPENAI_MODEL if has_openai else "Academic Heuristic Engine (Offline)",
-        "active_whisper_model": Config.WHISPER_MODEL if has_openai else "Whisper Demo Engine (Offline)",
+        "gemini_configured": has_gemini,
+        "openai_configured": has_gemini,
+        "active_llm_model": Config.GEMINI_MODEL if has_gemini else "Academic Heuristic Engine (Offline)",
+        "active_transcriber_model": Config.GEMINI_MODEL if has_gemini else "Gemini Demo Engine (Offline)",
+        "active_whisper_model": Config.GEMINI_MODEL if has_gemini else "Gemini Demo Engine (Offline)",
         "detail_levels": Config.DETAIL_LEVELS,
         "max_upload_mb": Config.MAX_CONTENT_LENGTH // (1024 * 1024)
     })
+
+
+@app.route("/api/test-connection", methods=["GET", "POST"])
+def test_connection():
+    """Tests live connectivity to Gemini 3.5 Flash API and reports configuration status or exact errors."""
+    data = request.get_json(silent=True) or {}
+    test_key = (data.get("api_key") or Config.GEMINI_API_KEY).strip()
+
+    if not test_key:
+        return jsonify({
+            "status": "not_configured",
+            "configured": False,
+            "model": Config.GEMINI_MODEL,
+            "error": "GEMINI_API_KEY is not set in your .env file. The application is running in local Academic Heuristic Mode.",
+            "suggestion": "To enable Gemini 3.5 Flash, open the .env file in the project root, set GEMINI_API_KEY=your_key, and restart the server."
+        }), 200
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=test_key)
+        start_time = time.time()
+        # Ping model with a short prompt
+        response = client.models.generate_content(
+            model=Config.GEMINI_MODEL,
+            contents="Respond with 'API_ONLINE'.",
+        )
+        latency_ms = round((time.time() - start_time) * 1000)
+        return jsonify({
+            "status": "connected",
+            "configured": True,
+            "model": Config.GEMINI_MODEL,
+            "latency_ms": latency_ms,
+            "message": f"Successfully connected to Google Gemini ({Config.GEMINI_MODEL})! Model is online and ready.",
+            "sample_response": (response.text or "").strip()
+        }), 200
+    except Exception as e:
+        error_msg = str(e)
+        return jsonify({
+            "status": "error",
+            "configured": True,
+            "model": Config.GEMINI_MODEL,
+            "error": error_msg,
+            "error_type": type(e).__name__,
+            "suggestion": "Please verify your Gemini API key validity, billing status, or network connection."
+        }), 200
 
 
 @app.route("/api/samples", methods=["GET"])
@@ -187,6 +243,7 @@ def generate_notes():
     raw_transcript = (data.get("transcript") or "").strip()
     subject = (data.get("subject") or "General").strip()
     detail_level = (data.get("detail_level") or "medium").strip().lower()
+    language = (data.get("language") or "both").strip().lower()
     clean_fillers = bool(data.get("clean_fillers", True))
     remove_timestamps = bool(data.get("remove_timestamps", True))
     enable_segmentation = bool(data.get("enable_segmentation", True))
@@ -196,6 +253,9 @@ def generate_notes():
 
     if detail_level not in Config.DETAIL_LEVELS:
         detail_level = "medium"
+
+    if language not in ("english", "hindi", "both", "bilingual"):
+        language = "both"
 
     try:
         # Step 1: Clean Transcript (timestamps are always purged for notes, Q&A, and quizzes)
@@ -212,11 +272,12 @@ def generate_notes():
         if enable_segmentation:
             segments = TopicSegmenter.segment_transcript(effective_transcript)
 
-        # Step 3: AI Notes Generation
+        # Step 3: AI Notes Generation (supports English, Hindi, and Bilingual modes)
         notes = ai_generator.generate_notes(
             transcript=effective_transcript,
             subject=subject,
             detail_level=detail_level,
+            language=language,
             segments=segments
         )
 
@@ -228,6 +289,7 @@ def generate_notes():
             title=title,
             subject=subject,
             detail_level=detail_level,
+            language=language,
             raw_transcript=raw_transcript,
             cleaned_transcript=cleaned_transcript,
             structured_notes=notes,
@@ -239,6 +301,7 @@ def generate_notes():
             "title": title,
             "subject": subject,
             "detail_level": detail_level,
+            "language": language,
             "word_count": word_count,
             "cleaning_stats": cleaning_stats,
             "segments_count": len(segments),
@@ -247,20 +310,27 @@ def generate_notes():
         }), 201
 
     except Exception as e:
-        return jsonify({"error": f"Failed to generate study notes: {str(e)}"}), 500
+        return jsonify({
+            "error": f"Failed to generate study notes: {str(e)}",
+            "error_type": type(e).__name__,
+            "active_model": Config.GEMINI_MODEL,
+            "api_configured": bool(Config.GEMINI_API_KEY)
+        }), 500
 
 
 @app.route("/api/notes", methods=["GET"])
 def list_notes():
-    """Lists saved notes with search, subject filter, and pagination."""
+    """Lists saved notes with search, subject/language filter, and pagination."""
     search_query = request.args.get("q", "").strip()
     subject_filter = request.args.get("subject", "").strip()
+    language_filter = request.args.get("language", "").strip()
     limit = min(int(request.args.get("limit", 50)), 100)
     offset = max(int(request.args.get("offset", 0)), 0)
 
     notes = db.get_all_notes(
         search_query=search_query,
         subject_filter=subject_filter,
+        language_filter=language_filter,
         limit=limit,
         offset=offset
     )

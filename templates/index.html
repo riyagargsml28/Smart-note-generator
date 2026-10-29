@@ -38,6 +38,10 @@
       </nav>
 
       <div class="header-actions">
+        <button id="api-status-btn" class="api-status-btn" onclick="openApiStatusModal()" title="View API configuration and run health diagnostics">
+          <span class="status-indicator-dot checking" id="api-status-dot"></span>
+          <span id="api-status-btn-text">Checking API...</span>
+        </button>
         <button class="btn btn-primary btn-sm" onclick="navigateTo('generator')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           <span>New Note</span>
@@ -248,6 +252,34 @@
               <input type="text" id="custom-subject-input" class="form-input" placeholder="Enter subject name (e.g. Cognitive Neuroscience)" style="display:none; margin-top: 8px;">
             </div>
 
+            <!-- Notes Language Selector (English, Hindi, Both) -->
+            <div class="form-group">
+              <label class="form-label">Study Notes Language / भाषा</label>
+              <div class="detail-cards">
+                <label class="detail-card">
+                  <input type="radio" name="note_language" value="both" checked>
+                  <div class="detail-card-body">
+                    <span class="detail-name">🌐 Both (English + Hindi)</span>
+                    <span class="detail-desc">Bilingual notes, Hindi explanations & dual-language quiz.</span>
+                  </div>
+                </label>
+                <label class="detail-card">
+                  <input type="radio" name="note_language" value="english">
+                  <div class="detail-card-body">
+                    <span class="detail-name">🇬🇧 English</span>
+                    <span class="detail-desc">Standard academic English study notes & MCQs.</span>
+                  </div>
+                </label>
+                <label class="detail-card">
+                  <input type="radio" name="note_language" value="hindi">
+                  <div class="detail-card-body">
+                    <span class="detail-name">🇮🇳 Hindi (हिंदी)</span>
+                    <span class="detail-desc">Complete Hindi notes, Devanagari terms & Hindi quiz.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <!-- Notes Detail Level -->
             <div class="form-group">
               <label class="form-label">Notes Detail Level</label>
@@ -309,6 +341,39 @@
               <div class="progress-step-text" id="progress-text">Analyzing transcript...</div>
             </div>
 
+            <!-- Incomplete / Generation Error Alert Card -->
+            <div id="generation-error-card" class="generation-error-card" style="display:none;">
+              <div class="gen-error-header">
+                <div class="gen-error-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div class="gen-error-titles">
+                  <h4 id="gen-error-title">Note Generation Incomplete</h4>
+                  <p id="gen-error-sub">The AI generation pipeline did not complete.</p>
+                </div>
+                <button class="gen-error-close" onclick="dismissGenerationError()" title="Dismiss">&times;</button>
+              </div>
+              <div class="gen-error-body">
+                <div class="gen-error-console">
+                  <div class="console-top-bar">
+                    <span class="console-tag">Error Output</span>
+                    <span id="gen-error-badge" class="console-status">Failed</span>
+                  </div>
+                  <pre id="gen-error-text">Unknown error</pre>
+                </div>
+                <div class="gen-error-footer">
+                  <button class="btn btn-secondary btn-sm" onclick="openApiStatusModal()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <span>Check API Status</span>
+                  </button>
+                  <button class="btn btn-primary btn-sm" onclick="generateNotes()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    <span>Retry Generation</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -323,6 +388,7 @@
         <div class="notes-meta-info">
           <div class="notes-tags">
             <span class="tag tag-subject" id="note-view-subject">Computer Science</span>
+            <span class="tag tag-lang" id="note-view-language">Bilingual (EN + HI)</span>
             <span class="tag tag-detail" id="note-view-level">Medium Notes</span>
             <span class="tag tag-words" id="note-view-words">1,240 words</span>
             <span class="tag tag-engine" id="note-view-engine">Academic AI</span>
@@ -523,8 +589,8 @@
         <div class="tech-stack-pills">
           <span class="tech-pill"><strong>Frontend:</strong> HTML5, Responsive Modern CSS, Vanilla ES6+</span>
           <span class="tech-pill"><strong>Backend:</strong> Python 3, Flask, Werkzeug</span>
-          <span class="tech-pill"><strong>Speech-to-Text:</strong> OpenAI Whisper API</span>
-          <span class="tech-pill"><strong>AI LLM:</strong> GPT-4o-mini / Academic Semantic Engine</span>
+          <span class="tech-pill"><strong>Speech-to-Text:</strong> Google Gemini 3.5 Flash (Multimodal Audio)</span>
+          <span class="tech-pill"><strong>AI LLM:</strong> Google Gemini 3.5 Flash</span>
           <span class="tech-pill"><strong>Data Validation:</strong> Pydantic v2</span>
           <span class="tech-pill"><strong>Database:</strong> SQLite3 with Full-Text Indexing</span>
           <span class="tech-pill"><strong>PDF Generation:</strong> ReportLab Document Flowables</span>
@@ -561,7 +627,80 @@
       </div>
     </section>
 
-  </main>
+  <!-- ========================================== -->
+  <!-- API Status & Diagnostics Modal -->
+  <!-- ========================================== -->
+  <div id="api-status-modal" class="modal-overlay" style="display:none;" onclick="closeApiModalOnBackdrop(event)">
+    <div class="modal-box api-modal-box">
+      <div class="modal-header">
+        <div class="modal-title-with-badge">
+          <h3>Google Gemini API Status & Diagnostics</h3>
+          <span id="modal-api-badge" class="badge">Checking...</span>
+        </div>
+        <button class="modal-close-btn" onclick="closeApiStatusModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-subtitle">Real-time status check for Google Gemini 3.5 Flash lecture synthesis and audio transcription.</p>
+
+        <!-- Status Cards Grid -->
+        <div class="api-status-grid">
+          <div class="api-stat-card">
+            <span class="stat-label">Model Target</span>
+            <strong id="modal-model-name" class="stat-val">gemini-3.5-flash</strong>
+          </div>
+          <div class="api-stat-card">
+            <span class="stat-label">API Key Configuration</span>
+            <strong id="modal-config-status" class="stat-val">Checking...</strong>
+          </div>
+          <div class="api-stat-card">
+            <span class="stat-label">Connection Health</span>
+            <strong id="modal-connection-health" class="stat-val">Not tested yet</strong>
+          </div>
+          <div class="api-stat-card">
+            <span class="stat-label">Round-Trip Latency</span>
+            <strong id="modal-latency-val" class="stat-val">-- ms</strong>
+          </div>
+        </div>
+
+        <!-- Live Ping Section -->
+        <div class="api-ping-box">
+          <div class="ping-bar">
+            <div>
+              <strong style="color:var(--text-main); font-size:0.95rem;">Live Server Ping</strong>
+              <div style="font-size:0.8rem; color:var(--text-muted);">Send a test prompt directly to Gemini 3.5 Flash to verify response.</div>
+            </div>
+            <button id="btn-run-api-test" class="btn btn-primary btn-sm" onclick="runLiveApiTest()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>Test Connection Now</span>
+            </button>
+          </div>
+
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <input type="password" id="custom-test-key-input" class="form-input" placeholder="Or paste an alternate Gemini API key to test..." style="font-size:0.85rem; height: 38px;">
+          </div>
+
+          <!-- Dynamic Result Box -->
+          <div id="api-test-result-box" class="api-result-box" style="display:none;"></div>
+        </div>
+
+        <!-- Guidance for Not Configured or Error -->
+        <div id="api-troubleshoot-box" class="troubleshoot-box" style="display:none;">
+          <h4 style="color:#b91c1c; margin-bottom:8px; font-size:0.95rem;">Troubleshooting & Setup Guide:</h4>
+          <ol style="margin-left: 20px; font-size:0.85rem; color:var(--text-muted); line-height: 1.6;">
+            <li>Locate the <code>.env</code> file in the project folder: <code>c:\Users\riyag\.gemini\antigravity\scratch\smart_notes_generator\.env</code></li>
+            <li>Ensure the key is defined: <code>GEMINI_API_KEY=your_key_here</code></li>
+            <li>Ensure the model is set: <code>GEMINI_MODEL=gemini-3.5-flash</code></li>
+            <li>Restart the Flask server to reload environment variables.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; padding:16px 24px; border-top:1px solid var(--border-color);">
+        <button class="btn btn-secondary btn-sm" onclick="closeApiStatusModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Sample Loader Modal -->
   <div id="sample-modal" class="modal-overlay" style="display:none;" onclick="closeModalOnBackdrop(event)">

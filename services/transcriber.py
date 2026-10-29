@@ -1,31 +1,46 @@
 """
 Audio Transcription Service.
-Transcribes lecture audio files into text using OpenAI Whisper API
+Transcribes lecture audio files into text using Google Gemini 3.5 Flash multimodal capabilities
 with file validation, size constraints, and offline sample fallback.
 """
 
 import os
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, BinaryIO
 
 
 class AudioTranscriber:
-    """Manages audio file validation and speech-to-text transcription via Whisper."""
+    """Manages audio file validation and speech-to-text transcription via Google Gemini 3.5 Flash."""
 
     ALLOWED_EXTENSIONS = {"mp3", "wav", "m4a", "webm", "ogg", "flac", "aac"}
-    MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024  # Whisper API 25MB limit
+    MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50MB limit
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "whisper-1"):
-        self.api_key = (api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
-        self.model = model
+    MIME_MAP = {
+        "mp3": "audio/mp3",
+        "wav": "audio/wav",
+        "m4a": "audio/m4a",
+        "webm": "audio/webm",
+        "ogg": "audio/ogg",
+        "flac": "audio/flac",
+        "aac": "audio/aac",
+    }
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-3.5-flash"):
+        self.api_key = (
+            api_key
+            or os.environ.get("GEMINI_API_KEY", "")
+            or os.environ.get("OPENAI_API_KEY", "")
+        ).strip()
+        self.model = model or "gemini-3.5-flash"
         self.client = None
 
         if self.api_key:
             try:
-                from openai import OpenAI
-                self.client = OpenAI(api_key=self.api_key)
+                from google import genai
+                self.client = genai.Client(api_key=self.api_key)
             except Exception as e:
-                print(f"[Warning] OpenAI client initialization for Whisper failed: {e}")
+                print(f"[Warning] Google GenAI client initialization for AudioTranscriber failed: {e}")
                 self.client = None
 
     def transcribe(
@@ -40,10 +55,10 @@ class AudioTranscriber:
         Args:
             file_path_or_stream: Path to saved audio file or file-like object.
             filename: Original name of the file (to verify extension).
-            language: Optional ISO-639-1 language code (e.g., 'en').
+            language: Optional language name or ISO code.
 
         Returns:
-            Dict containing 'text', 'engine', 'duration_estimate_sec', 'filename'.
+            Dict containing 'text', 'engine', 'filename', 'success'.
         """
         extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if extension not in self.ALLOWED_EXTENSIONS:
@@ -57,55 +72,80 @@ class AudioTranscriber:
             file_size = os.path.getsize(file_path_or_stream)
             if file_size > self.MAX_FILE_SIZE_BYTES:
                 raise ValueError(
-                    f"Audio file size ({round(file_size / (1024*1024), 2)} MB) exceeds the 25 MB limit for transcription."
+                    f"Audio file size ({round(file_size / (1024*1024), 2)} MB) exceeds the 50 MB limit for transcription."
                 )
 
-        # 1. Attempt Whisper API if client is configured
+        # 1. Attempt Gemini 3.5 Flash transcription if client is configured
         if self.client:
             try:
-                return self._transcribe_with_whisper(file_path_or_stream, filename, language)
+                return self._transcribe_with_gemini(file_path_or_stream, filename, extension, language)
             except Exception as e:
-                print(f"[Notice] Whisper API call failed ({e}). Reverting to fallback mode.")
+                print(f"[Notice] Gemini transcription failed ({e}). Reverting to fallback mode.")
 
         # 2. Informative Fallback for Offline / Keyless Environments
         return self._fallback_transcription(filename, file_size)
 
-    def _transcribe_with_whisper(
+    def _transcribe_with_gemini(
         self,
         file_path_or_stream: Union[str, Path, BinaryIO],
         filename: str,
+        extension: str,
         language: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Transcribes audio using OpenAI Whisper API."""
-        kwargs = {
-            "model": self.model,
-            "response_format": "verbose_json"
-        }
-        if language:
-            kwargs["language"] = language
+        """Transcribes audio using Google Gemini 3.5 Flash."""
+        from google.genai import types
 
+        mime_type = self.MIME_MAP.get(extension, "audio/mp3")
+
+        # Read audio bytes
         if isinstance(file_path_or_stream, (str, Path)):
-            with open(file_path_or_stream, "rb") as audio_file:
-                kwargs["file"] = audio_file
-                response = self.client.audio.transcriptions.create(**kwargs)
+            with open(file_path_or_stream, "rb") as f:
+                audio_bytes = f.read()
+        elif hasattr(file_path_or_stream, "read"):
+            if hasattr(file_path_or_stream, "seek"):
+                file_path_or_stream.seek(0)
+            audio_bytes = file_path_or_stream.read()
         else:
-            kwargs["file"] = (filename, file_path_or_stream)
-            response = self.client.audio.transcriptions.create(**kwargs)
+            raise ValueError("Invalid file object provided for transcription.")
 
-        text = getattr(response, "text", "") or ""
-        duration = getattr(response, "duration", None)
+        audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
 
-        return {
-            "text": text.strip(),
-            "engine": "OpenAI Whisper (" + self.model + ")",
-            "duration_seconds": duration,
-            "filename": filename,
-            "success": True
-        }
+        prompt = (
+            "You are an expert academic audio transcription system. "
+            "Listen to this lecture recording and transcribe all spoken content verbatim and accurately. "
+            "Retain academic terminology, formulas, and technical explanations without distortion. "
+            "Do NOT include markdown commentary or notes before or after the transcript; output ONLY the spoken transcription text."
+        )
+        if language and language.lower() not in ("auto", "none"):
+            prompt += f" The primary language spoken is {language}."
+
+        last_err = None
+        for attempt in range(3):
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=[prompt, audio_part],
+                )
+                text = (response.text or "").strip()
+                return {
+                    "text": text,
+                    "engine": "Google Gemini (" + self.model + ")",
+                    "filename": filename,
+                    "success": True
+                }
+            except Exception as e:
+                last_err = e
+                err_str = str(e)
+                if attempt < 2 and ("503" in err_str or "429" in err_str or "UNAVAILABLE" in err_str):
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                raise last_err
+
+        return self._fallback_transcription(filename, len(audio_bytes))
 
     def _fallback_transcription(self, filename: str, file_size: int) -> Dict[str, Any]:
         """
-        Provides a demonstration transcript when running without an OpenAI API key,
+        Provides a demonstration transcript when running without a Gemini API key,
         allowing students to explore the full note generation pipeline end-to-end.
         """
         sample_transcript = (
@@ -136,9 +176,9 @@ class AudioTranscriber:
 
         return {
             "text": sample_transcript,
-            "engine": "Whisper Demonstration Engine (Offline / Local Mode)",
+            "engine": "Gemini Demonstration Engine (Offline / Local Mode)",
             "duration_seconds": 185.0,
             "filename": filename,
             "success": True,
-            "notice": "Transcribed using offline academic speech demonstrator. Add OPENAI_API_KEY in .env for live Whisper STT."
+            "notice": "Transcribed using offline academic speech demonstrator. Add GEMINI_API_KEY in .env for live Gemini 3.5 Flash STT."
         }

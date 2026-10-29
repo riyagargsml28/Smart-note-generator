@@ -22,6 +22,14 @@ class TestAPI(unittest.TestCase):
         self.assertIn("active_llm_model", data)
         self.assertIn("detail_levels", data)
 
+    def test_test_connection_endpoint(self):
+        res = self.client.get("/api/test-connection")
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertIn("status", data)
+        self.assertIn("configured", data)
+        self.assertIn("model", data)
+
     def test_get_samples(self):
         res = self.client.get("/api/samples")
         self.assertEqual(res.status_code, 200)

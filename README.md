@@ -13,7 +13,7 @@
 University students and self-learners spend hundreds of hours listening to spoken lectures, often struggling to simultaneously transcribe key formulas, technical definitions, and core concepts. **Smart Notes Generator** bridges this gap:
 
 - **Multi-Source Ingestion:** Paste transcripts directly, drag-and-drop lecture documents (**TXT, PDF, DOCX, MD**), or upload audio recordings (**MP3, WAV, M4A, WEBM, OGG**).
-- **Speech-to-Text (ASR):** Transcribe lectures using **OpenAI Whisper** with an automatic offline demonstration fallback.
+- **Speech-to-Text (ASR):** High-accuracy lecture audio transcription natively using **Google Gemini 3.5 Flash** multimodal audio understanding with an automatic offline demonstration fallback.
 - **Smart Disfluency Cleaning:** Automatically strips verbal fillers (*"um"*, *"uh"*, *"you know"*), repetitive stuttering (*"the the"*, *"is is"*), and subtitle timestamps (*[00:12:45]*).
 - **Topic Segmentation:** Intelligently splits long lectures at logical discourse transitions (*"Now let's turn to..."*, *"Moving on..."*).
 - **Structured Academic Study Notes:** Strictly conforms to structured JSON including:
@@ -47,8 +47,8 @@ flowchart TD
         Cleaner["Transcript Cleaner (cleaner.py)"]
         Segmenter["Topic Segmenter & Chunking (segmenter.py)"]
         Parser["Document Parser (pypdf, python-docx)"]
-        Transcriber["Audio Transcriber (Whisper API / Fallback)"]
-        AIEngine["AI Notes Generator (GPT-4o-mini / Heuristic Engine)"]
+        Transcriber["Audio Transcriber (Gemini 3.5 Flash / Fallback)"]
+        AIEngine["AI Notes Generator (Gemini 3.5 Flash / Heuristic Engine)"]
         Exporter["Notes Exporter (ReportLab PDF, Markdown, TXT)"]
         DB[(SQLite Database: smart_notes.db)]
     end
@@ -71,10 +71,10 @@ flowchart TD
 ### 9-Step Application Workflow
 
 1. **Input Submission:** Student pastes transcript text or uploads a document/audio file.
-2. **Text Extraction & Transcription:** Documents (PDF, DOCX, TXT) are parsed. Audio files are processed via OpenAI Whisper speech-to-text.
+2. **Text Extraction & Transcription:** Documents (PDF, DOCX, TXT) are parsed. Audio files are processed via Google Gemini 3.5 Flash multimodal speech-to-text.
 3. **Disfluency Cleaning:** Spoken filler words (*"um"*, *"uh"*, *"you know"*), repeated words, and timestamps are stripped without losing semantic accuracy.
 4. **Topic Segmentation:** Long transcripts are segmented based on linguistic transition markers to optimize context utilization.
-5. **AI Synthesis:** The processed lecture is sent to the LLM (GPT-4o-mini or the built-in Academic Heuristic Engine) using a strict academic prompt.
+5. **AI Synthesis:** The processed lecture is sent to Google Gemini 3.5 Flash using structured output schema (`LectureNotes`).
 6. **Schema Validation:** The output JSON is rigorously validated against a Pydantic schema to guarantee consistent structure.
 7. **Ground Truth Check:** Content reflects only what was taught in the lecture without synthetic hallucinations.
 8. **Interactive Display:** Study notes are presented with formatted callouts, collapsible flashcards, and an auto-graded quiz.
